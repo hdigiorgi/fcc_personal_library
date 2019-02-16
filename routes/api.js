@@ -8,46 +8,61 @@
 
 'use strict';
 
-var expect = require('chai').expect;
-var MongoClient = require('mongodb').MongoClient;
-var ObjectId = require('mongodb').ObjectId;
-const MONGODB_CONNECTION_STRING = process.env.DB;
-//Example connection: MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, db) {});
+const book = require('../book');
+
+function textResponse(res, promise) {
+  promise.then(result => {
+    if(result.error == 404) {
+      res.status(404).send('')
+    } else if(result.error) {
+      res.status(400).send(result.error)
+    } else {
+      res.send(result)
+    }
+  })
+}
+
+function jsonResponse(res, promise) {
+  promise.then(result => {
+    if(result.error == 404) {
+      res.status(404).send('')
+    } else if(result.error) {
+      res.status(400).json(result)
+    } else {
+      res.json(result);
+    }
+  })
+}
 
 module.exports = function (app) {
 
   app.route('/api/books')
     .get(function (req, res){
-      //response will be array of book objects
-      //json res format: [{"_id": bookid, "title": book_title, "commentcount": num_of_comments },...]
+      jsonResponse(res, book.getAll())
     })
     
     .post(function (req, res){
-      var title = req.body.title;
-      //response will contain new book object including atleast _id and title
+      jsonResponse(res, book.create(req.body.title));
     })
     
     .delete(function(req, res){
-      //if successful response will be 'complete delete successful'
+      textResponse(res, book.deleteAll())
     });
-
 
 
   app.route('/api/books/:id')
     .get(function (req, res){
-      var bookid = req.params.id;
-      //json res format: {"_id": bookid, "title": book_title, "comments": [comment,comment,...]}
+      jsonResponse(res, book.getOne(req.params.id))
     })
     
     .post(function(req, res){
       var bookid = req.params.id;
       var comment = req.body.comment;
-      //json res format same as .get
+      jsonResponse(res, book.addComment(bookid, comment));
     })
     
     .delete(function(req, res){
-      var bookid = req.params.id;
-      //if successful response will be 'delete successful'
+      textResponse(res, book.deleteOne(req.params.id))
     });
   
 };
